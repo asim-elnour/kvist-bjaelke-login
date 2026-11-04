@@ -1,5 +1,6 @@
 using DataAccess;
 using Security;
+using Security.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +13,13 @@ builder.Services.ConfigureDomainServices(
 
 var app = builder.Build();
 
-// Create the database and tables the first time the app starts.
+// Create the database and the first admin the first time the app starts.
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+    scope.ServiceProvider.GetRequiredService<IUserService>().CreateFirstAdmin(
+        app.Configuration["AdminUsername"],
+        app.Configuration["AdminPassword"]);
 }
 
 if (app.Environment.IsDevelopment())
