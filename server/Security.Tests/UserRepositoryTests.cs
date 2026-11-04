@@ -8,7 +8,7 @@ namespace Security.Tests;
 
 public class UserRepositoryTests
 {
-    private static UserRepository CreateRepository()
+    internal static UserRepository CreateRepository()
     {
         // A database that only lives in memory, so every test starts empty.
         var connection = new SqliteConnection("Data Source=:memory:");
