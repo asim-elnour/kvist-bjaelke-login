@@ -1,0 +1,9 @@
+bin/
+obj/
+.idea/
+node_modules/
+dist/
+.env
+*.db
+*.db-shm
+*.db-wal
