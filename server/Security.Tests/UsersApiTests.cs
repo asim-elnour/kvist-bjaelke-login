@@ -69,6 +69,18 @@ public class UsersApiTests
     }
 
     [Fact]
+    public async Task Me_ReturnsTheLoggedInUser()
+    {
+        await CreateAsAdmin("alice", "user");
+        await LoginAs("alice");
+
+        var me = await _client.GetFromJsonAsync<UserResponse>("/api/users/me");
+
+        Assert.Equal("alice", me?.Username);
+        Assert.Equal("user", me?.Role);
+    }
+    
+    [Fact]
     public async Task User_CanRead_ButNotChange()
     {
         await CreateAsAdmin("alice", "user");
