@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Security.Tests/Security.Tests.csproj" />
+  <Project Path="Security/Security.csproj" />
+</Solution>
