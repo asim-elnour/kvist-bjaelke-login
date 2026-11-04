@@ -1,4 +1,5 @@
 using DataAccess;
+using Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +7,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.ConfigureInfrastructureServices(
     builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db");
+builder.Services.ConfigureDomainServices(
+    builder.Configuration["JwtSecret"] ?? throw new InvalidOperationException("JwtSecret is missing."));
 
 var app = builder.Build();
 
@@ -21,6 +24,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
