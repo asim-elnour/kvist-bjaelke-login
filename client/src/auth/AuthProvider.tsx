@@ -6,6 +6,7 @@ interface AuthContextValue {
     token: string | null;
     login: (request: LoginRequest) => Promise<void>;
     logout: () => void;
+    api: (path: string, options?: RequestInit) => Promise<Response>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -45,7 +46,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
     }
 
-    return <AuthContext.Provider value={{ token, login, logout }}>{children}</AuthContext.Provider>;
+    // Sends a request with the token. A 401 means the token is no longer valid, so log out.
+    async function api(path: string, options: RequestInit = {}) {
+        const response = await fetch(path, {
+            ...options,
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        });
+
+        if (response.status === 401) logout();
+
+        return response;
+    }
+
+
+    return <AuthContext.Provider value={{ token, login, logout, api }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

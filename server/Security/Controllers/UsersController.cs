@@ -22,6 +22,17 @@ public class UsersController(IUserRepository users, IPasswordHasher passwordHash
         return Ok(users.GetAll().Select(ToResponse));
     }
 
+    [HttpGet("me")]
+    public IActionResult GetMe()
+    {
+        var actor = GetActor();
+        if (actor == null) return Unauthorized();
+
+        return Ok(ToResponse(actor));
+    }
+
+
+    
     [HttpPost]
     public IActionResult Create([FromBody] CreateUserRequest request)
     {
