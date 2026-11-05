@@ -184,6 +184,24 @@ The connection to the server was then tested:
 
 The platform works from the client at http://10.5.71.45:8000. The screenshots under CDS.security are from this client, and they show the login and all 3 roles.
 
+## Problems and solutions
+
+| Problem | Solution |
+|---|---|
+| Docker gave "permission denied" after the user was added to the docker group | Logging out and in again applied the change |
+| Proxmox had no VLAN570 bridge | vmbr0 without a tag was used, and `ip -br a` confirmed a 10.5.70.x address |
+| `curl` gave a TLS error on port 8000 | The platform uses plain HTTP, so the address needed `http://`, not `https://` |
+
+# Final reflection
+
+**How are security and infrastructure connected?** The firewall limits clients to the platform's port, and the platform then checks who they are and what they may do. Hashing protects stored passwords, but plain HTTP still exposes them on the network, so the app and the network depend on each other.
+
+**What were the technical challenges?** Mostly the lab, as the table above shows: Docker permissions, finding the right network bridge and using the right address.
+
+**What was learned about deploying on a server?** The same container ran on the VM without code changes, and secrets stayed in `.env`. A failed ping doesn't mean a service is down, so the port itself must be tested.
+
+**What would change in a real company?** HTTPS, a static server address, limits on login attempts, password rules, PostgreSQL and backups.
+
 ## References
 
 Anthropic. (2026). Claude (claude-opus-5-5) [Large language model]. https://claude.ai
