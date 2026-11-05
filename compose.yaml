@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      ConnectionStrings__DefaultConnection: "Data Source=/app/data/app.db"
+    volumes:
+      - app-data:/app/data
+    ports:
+      - "8000:8000"
+
+volumes:
+  app-data:
