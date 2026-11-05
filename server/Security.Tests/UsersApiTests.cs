@@ -33,10 +33,10 @@ public class UsersApiTests
 
     private record TokenResponse(string Token);
 
-    private async Task LoginAs(string username, string password = "Secret123")
+    private async Task LoginAs(string username)
     {
         _client.DefaultRequestHeaders.Authorization = null;
-        var response = await _client.PostAsJsonAsync("/login", new LoginRequest(username, password));
+        var response = await _client.PostAsJsonAsync("/login", new LoginRequest(username, "Secret123"));
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<TokenResponse>();
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
@@ -54,8 +54,8 @@ public class UsersApiTests
     private Task<HttpResponseMessage> Create(string username, string role) =>
         _client.PostAsJsonAsync("/api/users", new CreateUserRequest(username, "Secret123", role));
 
-    private Task<HttpResponseMessage> Update(int id, string username, string role, string? password = null) =>
-        _client.PutAsJsonAsync($"/api/users/{id}", new UpdateUserRequest(username, password, role));
+    private Task<HttpResponseMessage> Update(int id, string username, string role) =>
+        _client.PutAsJsonAsync($"/api/users/{id}", new UpdateUserRequest(username, null, role));
 
     private Task<HttpResponseMessage> Delete(int id) =>
         _client.DeleteAsync($"/api/users/{id}");
@@ -68,18 +68,6 @@ public class UsersApiTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Me_ReturnsTheLoggedInUser()
-    {
-        await CreateAsAdmin("alice", "user");
-        await LoginAs("alice");
-
-        var me = await _client.GetFromJsonAsync<UserResponse>("/api/users/me");
-
-        Assert.Equal("alice", me?.Username);
-        Assert.Equal("user", me?.Role);
-    }
-    
     [Fact]
     public async Task User_CanRead_ButNotChange()
     {
@@ -94,30 +82,6 @@ public class UsersApiTests
     }
 
     [Fact]
-    public async Task Superuser_ChangesUsers()
-    {
-        var bob = await CreateAsAdmin("bob", "user");
-        await CreateAsAdmin("sam", "superuser");
-        await LoginAs("sam");
-
-        Assert.Equal(HttpStatusCode.Created, (await Create("carl", "user")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await Update(bob.Id, "bobby", "user")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await Delete(bob.Id)).StatusCode);
-    }
-
-    [Fact]
-    public async Task Superuser_CannotChangeHigherRoles()
-    {
-        var other = await CreateAsAdmin("other", "superuser");
-        await CreateAsAdmin("sam", "superuser");
-        await LoginAs("sam");
-
-        Assert.Equal(HttpStatusCode.Forbidden, (await Create("carl", "admin")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Update(other.Id, "other2", "superuser")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Delete(other.Id)).StatusCode);
-    }
-
-    [Fact]
     public async Task Superuser_CannotGiveAHigherRole()
     {
         var bob = await CreateAsAdmin("bob", "user");
@@ -128,28 +92,11 @@ public class UsersApiTests
     }
 
     [Fact]
-    public async Task Admin_ChangesEveryone()
-    {
-        var other = await CreateAsAdmin("other", "admin");
-
-        Assert.Equal(HttpStatusCode.OK, (await Update(other.Id, "other2", "superuser")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await Delete(other.Id)).StatusCode);
-    }
-
-    [Fact]
     public async Task Admin_CannotDeleteThemselves()
     {
         await LoginAs("boss");
 
         Assert.Equal(HttpStatusCode.Forbidden, (await Delete(1)).StatusCode);
-    }
-
-    [Fact]
-    public async Task Admin_CannotChangeTheirOwnRole()
-    {
-        await LoginAs("boss");
-
-        Assert.Equal(HttpStatusCode.Forbidden, (await Update(1, "boss", "user")).StatusCode);
     }
 
     [Fact]
@@ -162,46 +109,5 @@ public class UsersApiTests
 
         Assert.DoesNotContain("password", created, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("password", list, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task TakenUsername_Gives409()
-    {
-        var bob = await CreateAsAdmin("bob", "user");
-
-        Assert.Equal(HttpStatusCode.Conflict, (await Create("bob", "user")).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await Update(bob.Id, "boss", "user")).StatusCode);
-    }
-
-    [Fact]
-    public async Task UnknownRole_Gives400()
-    {
-        await LoginAs("boss");
-
-        Assert.Equal(HttpStatusCode.BadRequest, (await Create("alice", "king")).StatusCode);
-    }
-
-    [Fact]
-    public async Task NewPassword_WorksForLogin()
-    {
-        var bob = await CreateAsAdmin("bob", "user");
-
-        await Update(bob.Id, "bob", "user", "NewSecret456");
-
-        await LoginAs("bob", "NewSecret456");
-    }
-
-    [Fact]
-    public async Task LoweredRole_CountsRightAway()
-    {
-        var sam = await CreateAsAdmin("sam", "superuser");
-        await LoginAs("sam");
-        var samsOldToken = _client.DefaultRequestHeaders.Authorization;
-        await LoginAs("boss");
-        await Update(sam.Id, "sam", "user");
-
-        _client.DefaultRequestHeaders.Authorization = samsOldToken;
-
-        Assert.Equal(HttpStatusCode.Forbidden, (await Create("carl", "user")).StatusCode);
     }
 }

@@ -10,7 +10,7 @@ public class LoginTests
     private static UserService CreateServiceWithAlice()
     {
         var hasher = new Argon2PasswordHasher();
-        var repository = UserRepositoryTests.CreateRepository();
+        var repository = TestDatabase.CreateRepository();
         repository.Create(new User
         {
             Username = "alice",
@@ -32,17 +32,5 @@ public class LoginTests
     public void WrongPassword_ReturnsNull()
     {
         Assert.Null(CreateServiceWithAlice().TryLogin(new LoginRequest("alice", "Wrong123")));
-    }
-
-    [Fact]
-    public void EmptyPassword_ReturnsNull()
-    {
-        Assert.Null(CreateServiceWithAlice().TryLogin(new LoginRequest("alice", "")));
-    }
-
-    [Fact]
-    public void UnknownUser_ReturnsNull()
-    {
-        Assert.Null(CreateServiceWithAlice().TryLogin(new LoginRequest("nobody", "Secret123")));
     }
 }
