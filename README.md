@@ -12,7 +12,7 @@ A web app where employees log in with a username and password and see a table of
 | superuser | Read, and create, edit and delete users with the role user |
 | admin | Read, and create, edit and delete everyone |
 
-Nobody can sign up alone. The first admin comes from settings when the app starts. After that, only a logged-in superuser or admin can add people.
+Users can't sign up on their own. The first admin comes from settings when the app starts. After that, only a logged-in superuser or admin can add people.
 
 ## Screenshots
 
@@ -45,7 +45,7 @@ A user only sees the table:
 | Backend | C#, ASP.NET Web API, .NET 10 | JWT and role checks are built in |
 | Frontend | React, TypeScript, Bun | Types catch mistakes before the page runs |
 | Database | SQLite with EF Core | One file and no extra server. EF Core sends values as parameters, which protects against SQL injection |
-| Hosting | Docker Compose | Runs the same on my PC and on the server |
+| Hosting | Docker Compose | Runs the same on a developer's PC and on the server |
 
 ## Security features
 
@@ -65,11 +65,11 @@ A user only sees the table:
 ### Roles
 
 - No token or a bad token gives 401. A forbidden action gives 403.
-- One small method, `RoleRules.CanChange`, decides who may change whom. It checks the role of the person being changed, not only that you are logged in.
+- One small method, `RoleRules.CanChange`, decides who may change whom. It checks the role of the person being changed, not only that the user is logged in.
 - An edit checks both the person's current role and the new role, so a superuser can't make someone an admin.
-- The server reads your role from the database on every request, so a lowered role or a deleted account counts right away.
-- You can't delete yourself or change your own role, so there is always an admin left.
-- The page hides buttons you can't use, but the server is what really decides.
+- The server reads the user's role from the database on every request, so a lowered role or a deleted account counts right away.
+- Users can't delete themselves or change their own role, so there is always an admin left.
+- The page hides buttons the user can't use, but the server makes the final decision.
 
 ### Secrets
 
@@ -79,7 +79,7 @@ A user only sees the table:
 
 ## Alternatives
 
-| What I did | Alternative | Why |
+| Chosen solution | Alternative | Why |
 |---|---|---|
 | Hashing with Argon2id | scrypt, bcrypt or PBKDF2 | Argon2id is usually ranked first, because cracking it takes a lot of memory as well as time |
 | JWT for login | Sessions stored on the server | With sessions the server can end a login at once. A JWT keeps working until it expires, even after logout, but the server doesn't have to store it |
@@ -91,7 +91,7 @@ A user only sees the table:
 
 ## IP plan
 
-I split the company into VLANs, so each type of device has its own network. All addresses are private (10.x.x.x). VLAN 570 and 571 were given, and I followed the same pattern for the rest.
+The company network is split into VLANs, so each type of device has its own network. All addresses are private (10.x.x.x). VLAN 570 and 571 were given, and the same pattern is used for the rest.
 
 | VLAN | Network | Gateway | Devices | Addresses | Why it's separate |
 |---|---|---|---|---|---|
@@ -142,10 +142,54 @@ flowchart TB
 
 **Why allow only specific ports?** Every open port is a possible way in, so only the ports the platform needs are open.
 
+## Server on VLAN 571
 
+A VM in Proxmox with Ubuntu Server 26.04.1, 2 cores, 4096 MB of memory and a 32 GB disk, on the bridge VLAN571.
+
+Ubuntu Server is installed:
+
+![Ubuntu Server installed](images/server-install.png)
+
+The server got 10.5.71.45/24 from DHCP, with gateway 10.5.71.5. In production it would be static, as in the IP plan.
+
+![Server IP configuration](images/server-ip.png)
+
+Docker was installed with `sudo apt install docker.io docker-compose-v2`, and hello-world confirms that it works:
+
+![Docker works](images/server-docker.png)
+
+The repo was cloned, a `.env` file was created and `docker compose up -d --build` was run. The platform runs in a container:
+
+![Running container](images/server-container.png)
+
+Port 8000 was chosen, as it is the first port in the range the firewall allows. The platform answers on it:
+
+![Port 8000 open](images/server-port.png)
+
+## Client on VLAN 570
+
+A second VM with Ubuntu Desktop 26.04.1, so it has a browser, on the bridge vmbr0. It got 10.5.70.115/24 from DHCP, with gateway 10.5.70.5.
+
+![Client IP configuration](images/client-ip.png)
+
+The connection to the server was then tested:
+
+![Connection tests](images/client-connection.png)
+
+| Test | Result |
+|---|---|
+| Ping | No answer |
+| TCP port 8000 | Connected |
+| TCP port 3000 | Timed out, so the firewall dropped it |
+
+The platform works from the client at http://10.5.71.45:8000. The screenshots under CDS.security are from this client, and they show the login and all 3 roles.
 
 ## References
 
 Anthropic. (2026). Claude (claude-opus-5-5) [Large language model]. https://claude.ai
 
-Used as a helper during this assignment, because I worked alone.
+Used as a helper during this assignment, as it was completed by one person.
+
+## Appendix: Group contract
+
+The assignment was completed by one person, so there is no group contract.
